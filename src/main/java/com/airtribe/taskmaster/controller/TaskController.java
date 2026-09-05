@@ -33,14 +33,6 @@ public class TaskController {
         return ResponseEntity.status(HttpStatus.CREATED).body(taskService.toResponse(task));
     }
 
-//    @GetMapping
-//    public List<TaskResponse> getTeamTasks(@PathVariable Long teamId,
-//                                           @AuthenticationPrincipal User currentUser) {
-//        return taskService.getTasksForTeam(teamId, currentUser)
-//                .stream()
-//                .map(taskService::toResponse)
-//                .toList();
-//    }
 
     @PatchMapping("/{taskId}/assign")
     public TaskResponse assignTask(@PathVariable Long teamId,
