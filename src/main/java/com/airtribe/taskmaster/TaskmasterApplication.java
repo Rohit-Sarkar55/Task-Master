@@ -8,6 +8,8 @@ public class TaskmasterApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(TaskmasterApplication.class, args);
+
+        // temporary comment
     }
 
 }
