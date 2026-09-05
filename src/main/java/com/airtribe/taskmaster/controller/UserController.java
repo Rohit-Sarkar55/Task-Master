@@ -10,10 +10,8 @@ import jakarta.validation.Valid;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/users")
@@ -32,8 +30,13 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<UserResponse> login(@Valid @RequestBody LoginRequest request)throws BadRequestException {
-        User user = userService.login(request);
-        return ResponseEntity.ok(userService.toResponse(user));
+    public ResponseEntity<String> login(@Valid @RequestBody LoginRequest request)throws BadRequestException {
+        String token = userService.login(request);
+        return ResponseEntity.ok(token);
+    }
+
+    @GetMapping("/me")
+    public UserResponse me(@AuthenticationPrincipal User currentUser) {
+        return userService.toResponse(currentUser);
     }
 }
