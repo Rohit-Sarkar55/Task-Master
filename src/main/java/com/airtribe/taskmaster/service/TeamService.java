@@ -2,13 +2,17 @@ package com.airtribe.taskmaster.service;
 
 
 import com.airtribe.taskmaster.Util.TeamRole;
+import com.airtribe.taskmaster.dto.AddMemberRequest;
 import com.airtribe.taskmaster.dto.CreateTeamRequest;
 import com.airtribe.taskmaster.dto.TeamResponse;
 import com.airtribe.taskmaster.entities.Team;
 import com.airtribe.taskmaster.entities.TeamMember;
 import com.airtribe.taskmaster.entities.User;
+import com.airtribe.taskmaster.exceptions.BadRequestException;
+import com.airtribe.taskmaster.exceptions.ResourceNotFoundException;
 import com.airtribe.taskmaster.repositories.TeamMemberRepository;
 import com.airtribe.taskmaster.repositories.TeamRepository;
+import com.airtribe.taskmaster.repositories.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,10 +22,13 @@ public class TeamService {
 
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
+    private final UserRepository userRepository;
 
-    public TeamService(TeamRepository teamRepository, TeamMemberRepository teamMemberRepository) {
+    public TeamService(TeamRepository teamRepository, TeamMemberRepository teamMemberRepository,
+                       UserRepository userRepository) {
         this.teamRepository = teamRepository;
         this.teamMemberRepository = teamMemberRepository;
+        this.userRepository = userRepository;
     }
 
     public Team createTeam(CreateTeamRequest request, User owner) {
@@ -50,6 +57,34 @@ public class TeamService {
     }
 
     public List<Team> getTeamsForUser(Long userId) {
-        return teamRepository.findByOwnerId(userId);
+        return teamMemberRepository.findByUserId(userId)
+                .stream()
+                .map(TeamMember::getTeam)
+                .toList();
+    }
+
+    public void addMember(Long teamId, AddMemberRequest request, User requestingUser) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
+
+        TeamMember requesterMembership = teamMemberRepository.findByTeamIdAndUserId(teamId, requestingUser.getId())
+                .orElseThrow(() -> new BadRequestException("You are not a member of this team"));
+
+        if (requesterMembership.getRole() != TeamRole.OWNER && requesterMembership.getRole() != TeamRole.ADMIN) {
+            throw new BadRequestException("Only owners or admins can add members");
+        }
+
+        User userToAdd = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("No user found with that email"));
+
+        if (teamMemberRepository.findByTeamIdAndUserId(teamId, userToAdd.getId()).isPresent()) {
+            throw new BadRequestException("User is already a member of this team");
+        }
+
+        TeamMember newMembership = new TeamMember();
+        newMembership.setTeam(team);
+        newMembership.setUser(userToAdd);
+        newMembership.setRole(TeamRole.MEMBER);
+        teamMemberRepository.save(newMembership);
     }
 }

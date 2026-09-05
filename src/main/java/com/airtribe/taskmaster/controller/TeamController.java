@@ -1,6 +1,7 @@
 package com.airtribe.taskmaster.controller;
 
 
+import com.airtribe.taskmaster.dto.AddMemberRequest;
 import com.airtribe.taskmaster.dto.CreateTeamRequest;
 import com.airtribe.taskmaster.dto.TeamResponse;
 import com.airtribe.taskmaster.entities.Team;
@@ -37,5 +38,13 @@ public class TeamController {
                 .stream()
                 .map(teamService::toResponse)
                 .toList();
+    }
+
+    @PostMapping("/{id}/members")
+    public ResponseEntity<Void> addMember(@PathVariable Long id,
+                                          @Valid @RequestBody AddMemberRequest request,
+                                          @AuthenticationPrincipal User currentUser) {
+        teamService.addMember(id, request, currentUser);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

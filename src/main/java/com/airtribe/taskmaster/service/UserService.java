@@ -4,9 +4,9 @@ import com.airtribe.taskmaster.dto.LoginRequest;
 import com.airtribe.taskmaster.dto.UserRegisterRequest;
 import com.airtribe.taskmaster.dto.UserResponse;
 import com.airtribe.taskmaster.entities.User;
+import com.airtribe.taskmaster.exceptions.BadRequestException;
 import com.airtribe.taskmaster.repositories.UserRepository;
 import com.airtribe.taskmaster.security.JwtService;
-import org.apache.coyote.BadRequestException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -41,7 +41,7 @@ public class UserService {
         return new UserResponse(user.getId(), user.getName(), user.getEmail());
     }
 
-    public String login(LoginRequest request) throws BadRequestException {
+    public String login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BadRequestException("Invalid email or password"));
 
