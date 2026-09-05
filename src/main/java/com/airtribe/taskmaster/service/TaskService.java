@@ -2,20 +2,15 @@ package com.airtribe.taskmaster.service;
 
 
 import com.airtribe.taskmaster.Util.TaskSpecifications;
-import com.airtribe.taskmaster.dto.AssignTaskRequest;
-import com.airtribe.taskmaster.dto.CreateTaskRequest;
-import com.airtribe.taskmaster.dto.TaskResponse;
-import com.airtribe.taskmaster.dto.UpdateStatusRequest;
+import com.airtribe.taskmaster.dto.*;
+import com.airtribe.taskmaster.entities.Comment;
 import com.airtribe.taskmaster.entities.Team;
 import com.airtribe.taskmaster.entities.Task;
 
 import com.airtribe.taskmaster.entities.User;
 import com.airtribe.taskmaster.exceptions.BadRequestException;
 import com.airtribe.taskmaster.exceptions.ResourceNotFoundException;
-import com.airtribe.taskmaster.repositories.TaskRepository;
-import com.airtribe.taskmaster.repositories.TeamMemberRepository;
-import com.airtribe.taskmaster.repositories.TeamRepository;
-import com.airtribe.taskmaster.repositories.UserRepository;
+import com.airtribe.taskmaster.repositories.*;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -29,13 +24,15 @@ public class TaskService {
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final UserRepository userRepository;
+    private final CommentRepository commentRepository;
 
     public TaskService(TaskRepository taskRepository, TeamRepository teamRepository,
-                       TeamMemberRepository teamMemberRepository, UserRepository userRepository) {
+                       TeamMemberRepository teamMemberRepository, UserRepository userRepository, CommentRepository commentRepository) {
         this.taskRepository = taskRepository;
         this.teamRepository = teamRepository;
         this.teamMemberRepository = teamMemberRepository;
         this.userRepository = userRepository;
+        this.commentRepository = commentRepository;
     }
 
     public Task createTask(Long teamId, CreateTaskRequest request, User currentUser) {
@@ -130,5 +127,31 @@ public class TaskService {
         }
 
         return taskRepository.findAll(spec, sort);
+    }
+
+    public Comment addComment(Long teamId, Long taskId, AddCommentRequest request, User currentUser) {
+        Task task = getTaskInTeam(teamId, taskId, currentUser);
+
+        Comment comment = new Comment();
+        comment.setTask(task);
+        comment.setAuthor(currentUser);
+        comment.setContent(request.getContent());
+
+        return commentRepository.save(comment);
+    }
+
+    public List<Comment> getComments(Long teamId, Long taskId, User currentUser) {
+        getTaskInTeam(teamId, taskId, currentUser); // just to enforce the membership check
+        return commentRepository.findByTaskIdOrderByCreatedAtAsc(taskId);
+    }
+
+    public CommentResponse toCommentResponse(Comment comment) {
+        return new CommentResponse(
+                comment.getId(),
+                comment.getContent(),
+                comment.getAuthor().getId(),
+                comment.getAuthor().getName(),
+                comment.getCreatedAt()
+        );
     }
 }

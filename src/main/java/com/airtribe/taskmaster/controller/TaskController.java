@@ -1,10 +1,8 @@
 package com.airtribe.taskmaster.controller;
 
 
-import com.airtribe.taskmaster.dto.AssignTaskRequest;
-import com.airtribe.taskmaster.dto.CreateTaskRequest;
-import com.airtribe.taskmaster.dto.TaskResponse;
-import com.airtribe.taskmaster.dto.UpdateStatusRequest;
+import com.airtribe.taskmaster.dto.*;
+import com.airtribe.taskmaster.entities.Comment;
 import com.airtribe.taskmaster.entities.Task;
 import com.airtribe.taskmaster.entities.User;
 import com.airtribe.taskmaster.service.TaskService;
@@ -77,6 +75,25 @@ public class TaskController {
         return taskService.searchTasks(teamId, status, assignee, q, sort, currentUser)
                 .stream()
                 .map(taskService::toResponse)
+                .toList();
+    }
+
+    @PostMapping("/{taskId}/comments")
+    public ResponseEntity<CommentResponse> addComment(@PathVariable Long teamId,
+                                                      @PathVariable Long taskId,
+                                                      @Valid @RequestBody AddCommentRequest request,
+                                                      @AuthenticationPrincipal User currentUser) {
+        Comment comment = taskService.addComment(teamId, taskId, request, currentUser);
+        return ResponseEntity.status(HttpStatus.CREATED).body(taskService.toCommentResponse(comment));
+    }
+
+    @GetMapping("/{taskId}/comments")
+    public List<CommentResponse> getComments(@PathVariable Long teamId,
+                                             @PathVariable Long taskId,
+                                             @AuthenticationPrincipal User currentUser) {
+        return taskService.getComments(teamId, taskId, currentUser)
+                .stream()
+                .map(taskService::toCommentResponse)
                 .toList();
     }
 }
