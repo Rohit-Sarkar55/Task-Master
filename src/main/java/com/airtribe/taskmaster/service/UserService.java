@@ -1,9 +1,11 @@
 package com.airtribe.taskmaster.service;
 
+import com.airtribe.taskmaster.dto.LoginRequest;
 import com.airtribe.taskmaster.dto.UserRegisterRequest;
 import com.airtribe.taskmaster.dto.UserResponse;
 import com.airtribe.taskmaster.entities.User;
 import com.airtribe.taskmaster.repositories.UserRepository;
+import org.apache.coyote.BadRequestException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -33,5 +35,16 @@ public class UserService {
 
     public UserResponse toResponse(User user) {
         return new UserResponse(user.getId(), user.getName(), user.getEmail());
+    }
+
+    public User login(LoginRequest request) throws BadRequestException {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BadRequestException("Invalid email or password"));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            throw new BadRequestException("Invalid email or password");
+        }
+
+        return user;
     }
 }
