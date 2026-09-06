@@ -2,17 +2,26 @@ package com.airtribe.taskmaster.controller;
 
 
 import com.airtribe.taskmaster.dto.*;
+import com.airtribe.taskmaster.entities.Attachment;
 import com.airtribe.taskmaster.entities.Comment;
 import com.airtribe.taskmaster.entities.Task;
 import com.airtribe.taskmaster.entities.User;
 import com.airtribe.taskmaster.service.TaskService;
 import jakarta.validation.Valid;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
@@ -87,5 +96,40 @@ public class TaskController {
                 .stream()
                 .map(taskService::toCommentResponse)
                 .toList();
+    }
+
+    @PostMapping(value = "/{taskId}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<AttachmentResponse> uploadAttachment(@PathVariable Long teamId,
+                                                               @PathVariable Long taskId,
+                                                               @RequestParam("file") MultipartFile file,
+                                                               @AuthenticationPrincipal User currentUser) {
+        Attachment attachment = taskService.uploadAttachment(teamId, taskId, file, currentUser);
+        return ResponseEntity.status(HttpStatus.CREATED).body(taskService.toAttachmentResponse(attachment));
+    }
+
+    @GetMapping("/{taskId}/attachments")
+    public List<AttachmentResponse> listAttachments(@PathVariable Long teamId,
+                                                    @PathVariable Long taskId,
+                                                    @AuthenticationPrincipal User currentUser) {
+        return taskService.getAttachments(teamId, taskId, currentUser)
+                .stream()
+                .map(taskService::toAttachmentResponse)
+                .toList();
+    }
+
+    @GetMapping("/{taskId}/attachments/{attachmentId}")
+    public ResponseEntity<Resource> downloadAttachment(@PathVariable Long teamId,
+                                                       @PathVariable Long taskId,
+                                                       @PathVariable Long attachmentId,
+                                                       @AuthenticationPrincipal User currentUser) throws IOException {
+        Attachment attachment = taskService.getAttachmentForDownload(teamId, taskId, attachmentId, currentUser);
+        Path filePath = Paths.get(attachment.getFilePath());
+        Resource resource = new UrlResource(filePath.toUri());
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(
+                        attachment.getFileType() != null ? attachment.getFileType() : "application/octet-stream"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + attachment.getFileName() + "\"")
+                .body(resource);
     }
 }
