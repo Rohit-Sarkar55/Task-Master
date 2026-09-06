@@ -3,19 +3,23 @@ package com.airtribe.taskmaster.service;
 
 import com.airtribe.taskmaster.Util.TaskSpecifications;
 import com.airtribe.taskmaster.dto.*;
-import com.airtribe.taskmaster.entities.Comment;
-import com.airtribe.taskmaster.entities.Team;
-import com.airtribe.taskmaster.entities.Task;
+import com.airtribe.taskmaster.entities.*;
 
-import com.airtribe.taskmaster.entities.User;
 import com.airtribe.taskmaster.exceptions.BadRequestException;
 import com.airtribe.taskmaster.exceptions.ResourceNotFoundException;
 import com.airtribe.taskmaster.repositories.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class TaskService {
@@ -25,14 +29,19 @@ public class TaskService {
     private final TeamMemberRepository teamMemberRepository;
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
+    private final AttachmentRepository attachmentRepository;
+
+    @Value("${app.upload.dir}")
+    private String uploadDir;
 
     public TaskService(TaskRepository taskRepository, TeamRepository teamRepository,
-                       TeamMemberRepository teamMemberRepository, UserRepository userRepository, CommentRepository commentRepository) {
+                       TeamMemberRepository teamMemberRepository, UserRepository userRepository, CommentRepository commentRepository, AttachmentRepository attachmentRepository) {
         this.taskRepository = taskRepository;
         this.teamRepository = teamRepository;
         this.teamMemberRepository = teamMemberRepository;
         this.userRepository = userRepository;
         this.commentRepository = commentRepository;
+        this.attachmentRepository = attachmentRepository;
     }
 
     public Task createTask(Long teamId, CreateTaskRequest request, User currentUser) {
@@ -152,6 +161,59 @@ public class TaskService {
                 comment.getAuthor().getId(),
                 comment.getAuthor().getName(),
                 comment.getCreatedAt()
+        );
+    }
+
+    public Attachment uploadAttachment(Long teamId, Long taskId, MultipartFile file, User currentUser) {
+        Task task = getTaskInTeam(teamId, taskId, currentUser);
+
+        try {
+            Path uploadPath = Paths.get(uploadDir, "task-" + taskId);
+            Files.createDirectories(uploadPath);
+
+            String storedFileName = UUID.randomUUID() + "-" + file.getOriginalFilename();
+            Path fullPath = uploadPath.resolve(storedFileName);
+            file.transferTo(fullPath);
+
+            Attachment attachment = new Attachment();
+            attachment.setTask(task);
+            attachment.setUploadedBy(currentUser);
+            attachment.setFileName(file.getOriginalFilename());
+            attachment.setFilePath(fullPath.toString());
+            attachment.setFileType(file.getContentType());
+
+            return attachmentRepository.save(attachment);
+
+        } catch (IOException e) {
+            throw new BadRequestException("Failed to store file: " + e.getMessage());
+        }
+    }
+
+    public List<Attachment> getAttachments(Long teamId, Long taskId, User currentUser) {
+        getTaskInTeam(teamId, taskId, currentUser);
+        return attachmentRepository.findByTaskId(taskId);
+    }
+
+    public Attachment getAttachmentForDownload(Long teamId, Long taskId, Long attachmentId, User currentUser) {
+        getTaskInTeam(teamId, taskId, currentUser);
+
+        Attachment attachment = attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Attachment not found"));
+
+        if (!attachment.getTask().getId().equals(taskId)) {
+            throw new ResourceNotFoundException("Attachment not found for this task");
+        }
+
+        return attachment;
+    }
+
+    public AttachmentResponse toAttachmentResponse(Attachment attachment) {
+        return new AttachmentResponse(
+                attachment.getId(),
+                attachment.getFileName(),
+                attachment.getFileType(),
+                attachment.getUploadedBy().getId(),
+                attachment.getUploadedAt()
         );
     }
 }
