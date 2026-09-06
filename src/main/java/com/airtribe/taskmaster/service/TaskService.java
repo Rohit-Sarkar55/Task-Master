@@ -30,18 +30,20 @@ public class TaskService {
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
     private final AttachmentRepository attachmentRepository;
+    private final NotificationService notificationService;
 
     @Value("${app.upload.dir}")
     private String uploadDir;
 
     public TaskService(TaskRepository taskRepository, TeamRepository teamRepository,
-                       TeamMemberRepository teamMemberRepository, UserRepository userRepository, CommentRepository commentRepository, AttachmentRepository attachmentRepository) {
+                       TeamMemberRepository teamMemberRepository, UserRepository userRepository, CommentRepository commentRepository, AttachmentRepository attachmentRepository, NotificationService notificationService) {
         this.taskRepository = taskRepository;
         this.teamRepository = teamRepository;
         this.teamMemberRepository = teamMemberRepository;
         this.userRepository = userRepository;
         this.commentRepository = commentRepository;
         this.attachmentRepository = attachmentRepository;
+        this.notificationService = notificationService;
     }
 
     public Task createTask(Long teamId, CreateTaskRequest request, User currentUser) {
@@ -95,7 +97,11 @@ public class TaskService {
                 .orElseThrow(() -> new BadRequestException("That user is not a member of this team"));
 
         task.setAssignee(assignee);
-        return taskRepository.save(task);
+        Task savedTask = taskRepository.save(task);
+
+        notificationService.notifyUser(assignee, "You were assigned to task: " + task.getTitle(), task.getId());
+
+        return savedTask;
     }
 
     public Task updateStatus(Long teamId, Long taskId, UpdateStatusRequest request, User currentUser) {
