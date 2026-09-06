@@ -29,6 +29,10 @@ public class TaskResponse {
         this.assigneeId = assigneeId;
     }
 
+    public TaskResponse() {
+
+    }
+
     public Long getId() { return id; }
     public String getTitle() { return title; }
     public String getDescription() { return description; }
@@ -37,4 +41,36 @@ public class TaskResponse {
     public Long getTeamId() { return teamId; }
     public Long getCreatedById() { return createdById; }
     public Long getAssigneeId() { return assigneeId; }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setDueDate(LocalDate dueDate) {
+        this.dueDate = dueDate;
+    }
+
+    public void setStatus(Task.TaskStatus status) {
+        this.status = status;
+    }
+
+    public void setTeamId(Long teamId) {
+        this.teamId = teamId;
+    }
+
+    public void setCreatedById(Long createdById) {
+        this.createdById = createdById;
+    }
+
+    public void setAssigneeId(Long assigneeId) {
+        this.assigneeId = assigneeId;
+    }
 }
