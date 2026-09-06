@@ -1,11 +1,9 @@
 package com.airtribe.taskmaster.controller;
 
 
-import com.airtribe.taskmaster.dto.LoginRequest;
-import com.airtribe.taskmaster.dto.TaskResponse;
-import com.airtribe.taskmaster.dto.UserRegisterRequest;
-import com.airtribe.taskmaster.dto.UserResponse;
+import com.airtribe.taskmaster.dto.*;
 import com.airtribe.taskmaster.entities.User;
+import com.airtribe.taskmaster.service.NotificationService;
 import com.airtribe.taskmaster.service.TaskService;
 import com.airtribe.taskmaster.service.UserService;
 import jakarta.validation.Valid;
@@ -23,10 +21,12 @@ public class UserController {
 
     private final UserService userService;
     private final TaskService taskService;
+    private final NotificationService notificationService;
 
-    public UserController(UserService userService, TaskService taskService) {
+    public UserController(UserService userService, TaskService taskService, NotificationService notificationService) {
         this.userService = userService;
         this.taskService = taskService;
+        this.notificationService = notificationService;
     }
 
     @PostMapping("/register")
@@ -52,5 +52,20 @@ public class UserController {
                 .stream()
                 .map(taskService::toResponse)
                 .toList();
+    }
+
+    @GetMapping("/me/notifications")
+    public List<NotificationResponse> myNotifications(@AuthenticationPrincipal User currentUser) {
+        return notificationService.getForUser(currentUser.getId())
+                .stream()
+                .map(notificationService::toResponse)
+                .toList();
+    }
+
+    @PatchMapping("/me/notifications/{id}/read")
+    public ResponseEntity<Void> markNotificationRead(@PathVariable Long id,
+                                                     @AuthenticationPrincipal User currentUser) {
+        notificationService.markAsRead(id, currentUser);
+        return ResponseEntity.ok().build();
     }
 }
