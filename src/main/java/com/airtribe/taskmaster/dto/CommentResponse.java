@@ -1,8 +1,14 @@
 package com.airtribe.taskmaster.dto;
 
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.Instant;
 
+@Data
+@NoArgsConstructor
 public class CommentResponse {
 
     private Long id;
